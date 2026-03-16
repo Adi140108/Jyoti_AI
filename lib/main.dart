@@ -11,15 +11,6 @@ void main() async {
   
   await dotenv.load(fileName: ".env");
 
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-      systemNavigationBarColor: JyotiTheme.surface,
-      systemNavigationBarIconBrightness: Brightness.light,
-    ),
-  );
-
   runApp(const JyotiApp());
 }
 
@@ -30,11 +21,32 @@ class JyotiApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [ChangeNotifierProvider(create: (_) => JyotiProvider())],
-      child: MaterialApp(
-        title: 'Jyoti AI',
-        debugShowCheckedModeBanner: false,
-        theme: JyotiTheme.darkTheme,
-        home: const SplashScreen(),
+      child: Consumer<JyotiProvider>(
+        builder: (context, provider, _) {
+          final isDark = provider.isDarkMode;
+
+          // Update status bar to match theme
+          SystemChrome.setSystemUIOverlayStyle(
+            SystemUiOverlayStyle(
+              statusBarColor: Colors.transparent,
+              statusBarIconBrightness:
+                  isDark ? Brightness.light : Brightness.dark,
+              systemNavigationBarColor:
+                  isDark ? JyotiTheme.surface : JyotiTheme.lightSurface,
+              systemNavigationBarIconBrightness:
+                  isDark ? Brightness.light : Brightness.dark,
+            ),
+          );
+
+          return MaterialApp(
+            title: 'Jyoti AI',
+            debugShowCheckedModeBanner: false,
+            theme: JyotiTheme.lightTheme,
+            darkTheme: JyotiTheme.darkTheme,
+            themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
+            home: const SplashScreen(),
+          );
+        },
       ),
     );
   }

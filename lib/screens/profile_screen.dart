@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:jyoti_ai/models/models.dart';
 import 'package:jyoti_ai/providers/jyoti_provider.dart';
 import 'package:jyoti_ai/theme/app_theme.dart';
+import 'package:jyoti_ai/screens/onboarding_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -269,9 +270,12 @@ class ProfileScreen extends StatelessWidget {
                           value: 'Enabled',
                         ),
                         _SettingItem(
-                          icon: Icons.dark_mode_outlined,
+                          icon: provider.isDarkMode
+                              ? Icons.dark_mode_outlined
+                              : Icons.light_mode_outlined,
                           title: 'Theme',
-                          value: 'Dark',
+                          value: provider.isDarkMode ? 'Dark' : 'Light',
+                          onTap: () => provider.toggleTheme(),
                         ),
                       ]),
 
@@ -307,7 +311,7 @@ class ProfileScreen extends StatelessWidget {
                       // Sign out
                       Center(
                         child: TextButton(
-                          onPressed: () {},
+                          onPressed: () => _showSignOutDialog(context, provider),
                           child: const Text(
                             'Sign Out',
                             style: TextStyle(
@@ -337,6 +341,63 @@ class ProfileScreen extends StatelessWidget {
             ],
           );
         },
+      ),
+    );
+  }
+
+  void _showSignOutDialog(BuildContext context, JyotiProvider provider) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: JyotiTheme.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(JyotiTheme.radiusLg),
+        ),
+        title: const Text(
+          'Sign Out',
+          style: TextStyle(
+            color: JyotiTheme.textPrimary,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        content: const Text(
+          'Are you sure you want to sign out? All your data including chat history, streak, and points will be cleared.',
+          style: TextStyle(color: JyotiTheme.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: JyotiTheme.textMuted),
+            ),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx); // Close dialog
+              await provider.signOut();
+              if (context.mounted) {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  PageRouteBuilder(
+                    pageBuilder: (_, a, __) => const OnboardingScreen(),
+                    transitionsBuilder: (_, a, __, child) =>
+                        FadeTransition(opacity: a, child: child),
+                    transitionDuration: const Duration(milliseconds: 500),
+                  ),
+                  (_) => false, // Remove all routes
+                );
+              }
+            },
+            child: const Text(
+              'Sign Out',
+              style: TextStyle(
+                color: JyotiTheme.error,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
