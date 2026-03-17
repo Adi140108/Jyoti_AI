@@ -24,6 +24,22 @@ class _ChatScreenState extends State<ChatScreen> {
     super.dispose();
   }
 
+  void _showUnderWorking(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text(
+          'This feature is still under working.',
+          style: TextStyle(color: JyotiTheme.textPrimary),
+        ),
+        backgroundColor: JyotiTheme.surface,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(JyotiTheme.radiusSm),
+        ),
+      ),
+    );
+  }
+
   void _sendMessage() {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
@@ -189,7 +205,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   GestureDetector(
                     onTap: () {
                       HapticFeedback.mediumImpact();
-                      // Voice input placeholder
+                      _showUnderWorking(context);
                     },
                     child: Container(
                       width: 44,

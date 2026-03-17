@@ -9,6 +9,22 @@ import 'package:jyoti_ai/screens/onboarding_screen.dart';
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
+  void _showUnderWorking(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text(
+          'This feature is still under working.',
+          style: TextStyle(color: JyotiTheme.textPrimary),
+        ),
+        backgroundColor: JyotiTheme.surface,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(JyotiTheme.radiusSm),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -162,21 +178,25 @@ class ProfileScreen extends StatelessWidget {
                           title: 'Date of Birth',
                           value:
                               '${user.dateOfBirth.day}/${user.dateOfBirth.month}/${user.dateOfBirth.year}',
+                          onTap: () => _showUnderWorking(context),
                         ),
                         _SettingItem(
                           icon: Icons.access_time_rounded,
                           title: 'Time of Birth',
                           value: user.timeOfBirth,
+                          onTap: () => _showUnderWorking(context),
                         ),
                         _SettingItem(
                           icon: Icons.location_on_outlined,
                           title: 'Place of Birth',
                           value: user.placeOfBirth,
+                          onTap: () => _showUnderWorking(context),
                         ),
                         _SettingItem(
                           icon: Icons.auto_awesome_rounded,
                           title: 'Nakshatra',
                           value: user.nakshatra,
+                          onTap: () => _showUnderWorking(context),
                         ),
                       ]),
 
@@ -268,6 +288,7 @@ class ProfileScreen extends StatelessWidget {
                           icon: Icons.notifications_outlined,
                           title: 'Notifications',
                           value: 'Enabled',
+                          onTap: () => _showUnderWorking(context),
                         ),
                         _SettingItem(
                           icon: provider.isDarkMode
@@ -288,21 +309,25 @@ class ProfileScreen extends StatelessWidget {
                           icon: Icons.privacy_tip_outlined,
                           title: 'Privacy Policy',
                           value: '',
+                          onTap: () => _showUnderWorking(context),
                         ),
                         _SettingItem(
                           icon: Icons.description_outlined,
                           title: 'Terms of Service',
                           value: '',
+                          onTap: () => _showUnderWorking(context),
                         ),
                         _SettingItem(
                           icon: Icons.help_outline_rounded,
                           title: 'Help & FAQ',
                           value: '',
+                          onTap: () => _showUnderWorking(context),
                         ),
                         _SettingItem(
                           icon: Icons.info_outline_rounded,
                           title: 'Version',
                           value: '1.0.0',
+                          onTap: () => _showUnderWorking(context),
                         ),
                       ]),
 

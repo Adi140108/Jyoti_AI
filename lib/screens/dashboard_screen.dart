@@ -25,6 +25,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
   }
 
+  void _showUnderWorking(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text(
+          'This feature is still under working.',
+          style: TextStyle(color: JyotiTheme.textPrimary),
+        ),
+        backgroundColor: JyotiTheme.surface,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(JyotiTheme.radiusSm),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -126,7 +142,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       if (provider.isReadingLoading)
                         _buildLoadingSkeleton()
                       else if (reading != null)
-                        _buildDailyReadingCard(reading, rashiColor),
+                        _buildDailyReadingCard(context, reading, rashiColor),
 
                       const SizedBox(height: JyotiTheme.spacingMd),
 
@@ -136,7 +152,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       const SizedBox(height: JyotiTheme.spacingMd),
 
                       // Quick Actions
-                      _buildQuickActions(),
+                      _buildQuickActions(context),
 
                       const SizedBox(height: JyotiTheme.spacingMd),
 
@@ -247,7 +263,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildDailyReadingCard(DailyReading reading, Color rashiColor) {
+  Widget _buildDailyReadingCard(BuildContext context, DailyReading reading, Color rashiColor) {
     final scoreStars =
         '★' * reading.overallScore.round() +
         '☆' * (5 - reading.overallScore.round());
@@ -385,7 +401,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
-              onPressed: () {},
+              onPressed: () => _showUnderWorking(context),
               icon: Icon(Icons.share_rounded, size: 18, color: rashiColor),
               label: Text(
                 'Share Reading & Earn 50 pts',
@@ -489,7 +505,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildQuickActions() {
+  Widget _buildQuickActions(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -504,47 +520,50 @@ class _DashboardScreenState extends State<DashboardScreen> {
         const SizedBox(height: JyotiTheme.spacingSm),
         Row(
           children: [
-            _actionTile('💬', 'Ask Jyoti', '20 pts', JyotiTheme.gold),
+            _actionTile('💬', 'Ask Jyoti', '20 pts', JyotiTheme.gold, () => _showUnderWorking(context)),
             const SizedBox(width: 10),
-            _actionTile('📜', 'Kundli', '30 pts', JyotiTheme.cosmic),
+            _actionTile('📜', 'Kundli', '30 pts', JyotiTheme.cosmic, () => _showUnderWorking(context)),
             const SizedBox(width: 10),
-            _actionTile('💕', 'Match', '40 pts', const Color(0xFFEF4444)),
+            _actionTile('💕', 'Match', '40 pts', const Color(0xFFEF4444), () => _showUnderWorking(context)),
           ],
         ),
       ],
     );
   }
 
-  Widget _actionTile(String emoji, String label, String cost, Color color) {
+  Widget _actionTile(String emoji, String label, String cost, Color color, VoidCallback onTap) {
     return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(JyotiTheme.spacingMd),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(JyotiTheme.radiusMd),
-          color: color.withValues(alpha: 0.06),
-          border: Border.all(color: color.withValues(alpha: 0.15)),
-        ),
-        child: Column(
-          children: [
-            Text(emoji, style: const TextStyle(fontSize: 28)),
-            const SizedBox(height: 6),
-            Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(JyotiTheme.spacingMd),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(JyotiTheme.radiusMd),
+            color: color.withValues(alpha: 0.06),
+            border: Border.all(color: color.withValues(alpha: 0.15)),
+          ),
+          child: Column(
+            children: [
+              Text(emoji, style: const TextStyle(fontSize: 28)),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              cost,
-              style: TextStyle(
-                color: color.withValues(alpha: 0.6),
-                fontSize: 11,
+              const SizedBox(height: 2),
+              Text(
+                cost,
+                style: TextStyle(
+                  color: color.withValues(alpha: 0.6),
+                  fontSize: 11,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

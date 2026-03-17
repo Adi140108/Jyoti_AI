@@ -8,6 +8,22 @@ import 'package:jyoti_ai/theme/app_theme.dart';
 class WalletScreen extends StatelessWidget {
   const WalletScreen({super.key});
 
+  void _showUnderWorking(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text(
+          'This feature is still under working.',
+          style: TextStyle(color: JyotiTheme.textPrimary),
+        ),
+        backgroundColor: JyotiTheme.surface,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(JyotiTheme.radiusSm),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -182,36 +198,42 @@ class WalletScreen extends StatelessWidget {
                       const SizedBox(height: JyotiTheme.spacingSm),
 
                       _buildEarnTile(
+                        context,
                         'Daily Login',
                         '+10 pts / day',
                         Icons.calendar_today_rounded,
                         JyotiTheme.gold,
                       ),
                       _buildEarnTile(
+                        context,
                         'Share Reading',
                         '+50 pts / share',
                         Icons.share_rounded,
                         JyotiTheme.cosmic,
                       ),
                       _buildEarnTile(
+                        context,
                         'Refer a Friend',
                         '+200 pts / signup',
                         Icons.group_add_rounded,
                         JyotiTheme.success,
                       ),
                       _buildEarnTile(
+                        context,
                         '7-Day Streak',
                         '+200 pts bonus',
                         Icons.local_fire_department_rounded,
                         const Color(0xFFFF8C00),
                       ),
                       _buildEarnTile(
+                        context,
                         'Rate a Reading',
                         '+15 pts (max 3/day)',
                         Icons.star_rounded,
                         JyotiTheme.goldLight,
                       ),
                       _buildEarnTile(
+                        context,
                         'Complete Kundli',
                         '+100 pts (one-time)',
                         Icons.description_rounded,
@@ -402,6 +424,7 @@ class WalletScreen extends StatelessWidget {
   }
 
   Widget _buildEarnTile(
+    BuildContext context,
     String title,
     String reward,
     IconData icon,
@@ -409,15 +432,17 @@ class WalletScreen extends StatelessWidget {
   ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: Container(
-        padding: const EdgeInsets.all(JyotiTheme.spacingMd - 2),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(JyotiTheme.radiusMd),
-          color: color.withValues(alpha: 0.05),
-          border: Border.all(color: color.withValues(alpha: 0.12)),
-        ),
-        child: Row(
-          children: [
+      child: GestureDetector(
+        onTap: () => _showUnderWorking(context),
+        child: Container(
+          padding: const EdgeInsets.all(JyotiTheme.spacingMd - 2),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(JyotiTheme.radiusMd),
+            color: color.withValues(alpha: 0.05),
+            border: Border.all(color: color.withValues(alpha: 0.12)),
+          ),
+          child: Row(
+            children: [
             Container(
               width: 36,
               height: 36,
@@ -427,26 +452,27 @@ class WalletScreen extends StatelessWidget {
               ),
               child: Icon(icon, color: color, size: 18),
             ),
-            const SizedBox(width: JyotiTheme.spacingSm),
-            Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(
-                  color: JyotiTheme.textPrimary,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
+              const SizedBox(width: JyotiTheme.spacingSm),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    color: JyotiTheme.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
-            ),
-            Text(
-              reward,
-              style: TextStyle(
-                color: color,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
+              Text(
+                reward,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
