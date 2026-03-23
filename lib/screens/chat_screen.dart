@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:jyoti_ai/providers/jyoti_provider.dart';
+import 'package:jyoti_ai/models/models.dart';
 import 'package:jyoti_ai/theme/app_theme.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -63,9 +64,15 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: JyotiTheme.background,
+      drawer: const ChatHistoryDrawer(),
       appBar: AppBar(
         backgroundColor: JyotiTheme.surface,
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu_rounded, color: JyotiTheme.textPrimary),
+            onPressed: () => Scaffold.of(context).openDrawer(),
+          ),
+        ),
         title: Row(
           children: [
             Container(
@@ -83,20 +90,24 @@ class _ChatScreenState extends State<ChatScreen> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Jyoti',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: JyotiTheme.textPrimary,
+                Selector<JyotiProvider, String>(
+                  selector: (_, p) => p.currentSession?.title ?? 'Jyoti',
+                  builder: (_, title, __) => Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: JyotiTheme.textPrimary,
+                    ),
                   ),
                 ),
-                Consumer<JyotiProvider>(
-                  builder: (_, p, __) => Text(
-                    p.isChatLoading ? 'typing...' : 'AI Vedic Astrologer',
+                Selector<JyotiProvider, bool>(
+                  selector: (_, p) => p.isChatLoading,
+                  builder: (_, isLoading, __) => Text(
+                    isLoading ? 'typing...' : 'AI Vedic Astrologer',
                     style: TextStyle(
                       fontSize: 12,
-                      color: p.isChatLoading
+                      color: isLoading
                           ? JyotiTheme.goldLight
                           : JyotiTheme.textMuted,
                     ),
@@ -108,8 +119,9 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
         actions: [
           // Points
-          Consumer<JyotiProvider>(
-            builder: (_, p, __) => Container(
+          Selector<JyotiProvider, int>(
+            selector: (_, p) => p.user.points,
+            builder: (_, points, __) => Container(
               margin: const EdgeInsets.only(right: 16),
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
@@ -122,7 +134,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   const Text('✨', style: TextStyle(fontSize: 12)),
                   const SizedBox(width: 4),
                   Text(
-                    '${p.user.points}',
+                    '$points',
                     style: const TextStyle(
                       color: JyotiTheme.goldLight,
                       fontSize: 13,
@@ -141,24 +153,24 @@ class _ChatScreenState extends State<ChatScreen> {
           Expanded(
             child: Consumer<JyotiProvider>(
               builder: (context, provider, _) {
-                if (provider.messages.isEmpty) {
-                  return _buildEmptyChat();
+                final messages = provider.messages;
+                final isLoading = provider.isChatLoading;
+
+                if (messages.isEmpty && !isLoading) {
+                  return const EmptyChatView();
                 }
 
                 return ListView.builder(
                   controller: _scrollController,
                   physics: const BouncingScrollPhysics(),
                   padding: const EdgeInsets.all(JyotiTheme.spacingMd),
-                  itemCount:
-                      provider.messages.length +
-                      (provider.isChatLoading ? 1 : 0),
+                  itemCount: messages.length + (isLoading ? 1 : 0),
                   itemBuilder: (context, index) {
-                    if (index == provider.messages.length &&
-                        provider.isChatLoading) {
-                      return _buildTypingIndicator();
+                    if (index == messages.length && isLoading) {
+                      return const TypingIndicator();
                     }
-                    final msg = provider.messages[index];
-                    return _buildMessageBubble(msg.text, msg.isUser);
+                    final msg = messages[index];
+                    return MessageBubble(text: msg.text, isUser: msg.isUser);
                   },
                 );
               },
@@ -291,8 +303,143 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
     );
   }
+}
 
-  Widget _buildEmptyChat() {
+// Extracted Widget Components for Performance
+
+class MessageBubble extends StatelessWidget {
+  final String text;
+  final bool isUser;
+
+  const MessageBubble({
+    super.key,
+    required this.text,
+    required this.isUser,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: EdgeInsets.only(
+          bottom: 12,
+          left: isUser ? 60 : 0,
+          right: isUser ? 0 : 60,
+        ),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(16),
+            topRight: const Radius.circular(16),
+            bottomLeft: isUser
+                ? const Radius.circular(16)
+                : const Radius.circular(4),
+            bottomRight: isUser
+                ? const Radius.circular(4)
+                : const Radius.circular(16),
+          ),
+          color: isUser
+              ? JyotiTheme.gold.withValues(alpha: 0.15)
+              : JyotiTheme.cardBg,
+          border: Border.all(
+            color: isUser
+                ? JyotiTheme.gold.withValues(alpha: 0.25)
+                : JyotiTheme.border,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (!isUser)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('🕉️', style: TextStyle(fontSize: 12)),
+                    const SizedBox(width: 4),
+                    const Text(
+                      'Jyoti',
+                      style: TextStyle(
+                        color: JyotiTheme.goldLight,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            Text(
+              text,
+              style: TextStyle(
+                color: isUser ? JyotiTheme.goldLight : JyotiTheme.textSecondary,
+                fontSize: 14.5,
+                height: 1.6,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class TypingIndicator extends StatelessWidget {
+  const TypingIndicator({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return RepaintBoundary(
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 12, right: 60),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(16),
+              topRight: Radius.circular(16),
+              bottomRight: Radius.circular(16),
+              bottomLeft: Radius.circular(4),
+            ),
+            color: JyotiTheme.cardBg,
+            border: Border.all(color: JyotiTheme.border),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('🕉️', style: TextStyle(fontSize: 12)),
+              const SizedBox(width: 8),
+              ...List.generate(3, (i) {
+                return TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0.3, end: 1.0),
+                  duration: Duration(milliseconds: 600 + (i * 200)),
+                  curve: Curves.easeInOut,
+                  builder: (_, val, __) => Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 2),
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: JyotiTheme.goldLight.withValues(alpha: val * 0.8),
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class EmptyChatView extends StatelessWidget {
+  const EmptyChatView({super.key});
+
+  @override
+  Widget build(BuildContext context) {
     return Center(
       child: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
@@ -351,8 +498,8 @@ class _ChatScreenState extends State<ChatScreen> {
                 padding: const EdgeInsets.only(bottom: 8),
                 child: GestureDetector(
                   onTap: () {
-                    _controller.text = q;
-                    _sendMessage();
+                    final provider = context.read<JyotiProvider>();
+                    provider.sendMessage(q);
                   },
                   child: Container(
                     width: double.infinity,
@@ -398,65 +545,173 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
     );
   }
+}
 
-  Widget _buildMessageBubble(String text, bool isUser) {
-    return Align(
-      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: EdgeInsets.only(
-          bottom: 12,
-          left: isUser ? 60 : 0,
-          right: isUser ? 0 : 60,
-        ),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(16),
-            topRight: const Radius.circular(16),
-            bottomLeft: isUser
-                ? const Radius.circular(16)
-                : const Radius.circular(4),
-            bottomRight: isUser
-                ? const Radius.circular(4)
-                : const Radius.circular(16),
-          ),
-          color: isUser
-              ? JyotiTheme.gold.withValues(alpha: 0.15)
-              : JyotiTheme.cardBg,
-          border: Border.all(
-            color: isUser
-                ? JyotiTheme.gold.withValues(alpha: 0.25)
-                : JyotiTheme.border,
-          ),
-        ),
+class ChatHistoryDrawer extends StatelessWidget {
+  const ChatHistoryDrawer({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Drawer(
+      backgroundColor: JyotiTheme.background,
+      child: SafeArea(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (!isUser)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text('🕉️', style: TextStyle(fontSize: 12)),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Jyoti',
-                      style: TextStyle(
-                        color: JyotiTheme.goldLight,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
+            // Header with New Chat button
+            Padding(
+              padding: const EdgeInsets.all(JyotiTheme.spacingMd),
+              child: Column(
+                children: [
+                  const _DrawerHeader(),
+                  const SizedBox(height: 20),
+                  const PersonaSelectorhud(),
+                  const SizedBox(height: 16),
+                  const NewChatButton(),
+                ],
               ),
+            ),
+
+            const Divider(color: JyotiTheme.border, height: 1),
+
+            // Chat List
+            const Expanded(
+              child: ChatHistoryList(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DrawerHeader extends StatelessWidget {
+  const _DrawerHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: JyotiTheme.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: JyotiTheme.border),
+          ),
+          child: const Text('🔮', style: TextStyle(fontSize: 20)),
+        ),
+        const SizedBox(width: 12),
+        const Text(
+          'My Readings',
+          style: TextStyle(
+            color: JyotiTheme.textPrimary,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class PersonaSelectorhud extends StatelessWidget {
+  const PersonaSelectorhud({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: JyotiTheme.surface,
+        borderRadius: BorderRadius.circular(JyotiTheme.radiusLg),
+        border: Border.all(color: JyotiTheme.border),
+      ),
+      child: Row(
+        children: Persona.values.map((p) {
+          return Expanded(
+            child: Selector<JyotiProvider, bool>(
+              selector: (ctx, provider) => provider.persona == p,
+              builder: (ctx, isSelected, _) {
+                return GestureDetector(
+                  onTap: () {
+                    context.read<JyotiProvider>().setPersona(p);
+                    HapticFeedback.lightImpact();
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isSelected ? JyotiTheme.background : Colors.transparent,
+                      borderRadius: BorderRadius.circular(JyotiTheme.radiusMd),
+                      border: Border.all(
+                        color: isSelected
+                            ? JyotiTheme.gold.withValues(alpha: 0.3)
+                            : Colors.transparent,
+                      ),
+                      boxShadow: isSelected
+                          ? [
+                              BoxShadow(
+                                color: JyotiTheme.gold.withValues(alpha: 0.1),
+                                blurRadius: 10,
+                              )
+                            ]
+                          : null,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(p.emoji, style: const TextStyle(fontSize: 18)),
+                        const SizedBox(height: 2),
+                        Text(
+                          p.name.split(' ').first,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                            color: isSelected ? JyotiTheme.goldLight : JyotiTheme.textMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+class NewChatButton extends StatelessWidget {
+  const NewChatButton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        context.read<JyotiProvider>().startNewChat();
+        Navigator.pop(context);
+      },
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: JyotiTheme.gold.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(JyotiTheme.radiusMd),
+          border: Border.all(
+            color: JyotiTheme.gold.withValues(alpha: 0.3),
+          ),
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.add_circle_outline, color: JyotiTheme.goldLight),
+            SizedBox(width: 8),
             Text(
-              text,
+              'New Chat',
               style: TextStyle(
-                color: isUser ? JyotiTheme.goldLight : JyotiTheme.textSecondary,
-                fontSize: 14.5,
-                height: 1.6,
+                color: JyotiTheme.goldLight,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ],
@@ -464,47 +719,115 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
     );
   }
+}
 
-  Widget _buildTypingIndicator() {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12, right: 60),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(16),
-            topRight: Radius.circular(16),
-            bottomRight: Radius.circular(16),
-            bottomLeft: Radius.circular(4),
+class ChatHistoryList extends StatelessWidget {
+  const ChatHistoryList({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Selector<JyotiProvider, List<ChatSession>>(
+      selector: (_, p) => p.sessions,
+      builder: (context, sessions, _) {
+        if (sessions.isEmpty) {
+          return const Center(
+            child: Text(
+              'No chat history yet',
+              style: TextStyle(color: JyotiTheme.textSubtle),
+            ),
+          );
+        }
+        return ListView.builder(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          itemCount: sessions.length,
+          itemBuilder: (context, index) {
+            return ChatSessionTile(session: sessions[index]);
+          },
+        );
+      },
+    );
+  }
+}
+
+class ChatSessionTile extends StatelessWidget {
+  final ChatSession session;
+
+  const ChatSessionTile({super.key, required this.session});
+
+  @override
+  Widget build(BuildContext context) {
+    return Selector<JyotiProvider, String?>(
+      selector: (_, p) => p.currentSessionId,
+      builder: (context, currentId, _) {
+        final isSelected = session.id == currentId;
+        return Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 4,
           ),
-          color: JyotiTheme.cardBg,
-          border: Border.all(color: JyotiTheme.border),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('🕉️', style: TextStyle(fontSize: 12)),
-            const SizedBox(width: 8),
-            ...List.generate(3, (i) {
-              return TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0.3, end: 1.0),
-                duration: Duration(milliseconds: 600 + (i * 200)),
-                curve: Curves.easeInOut,
-                builder: (_, val, __) => Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 2),
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: JyotiTheme.goldLight.withValues(alpha: val * 0.8),
-                  ),
+          child: InkWell(
+            onTap: () {
+              context.read<JyotiProvider>().switchSession(session.id);
+              Navigator.pop(context);
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 14,
+              ),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: isSelected ? JyotiTheme.surface : Colors.transparent,
+                border: Border.all(
+                  color: isSelected
+                      ? JyotiTheme.gold.withValues(alpha: 0.2)
+                      : Colors.transparent,
                 ),
-              );
-            }),
-          ],
-        ),
-      ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.chat_bubble_outline_rounded,
+                    size: 18,
+                    color: isSelected ? JyotiTheme.goldLight : JyotiTheme.textMuted,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      session.title,
+                      style: TextStyle(
+                        color: isSelected ? JyotiTheme.textPrimary : JyotiTheme.textSecondary,
+                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                        fontSize: 14,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (isSelected)
+                    const Icon(
+                      Icons.circle,
+                      size: 8,
+                      color: JyotiTheme.goldLight,
+                    )
+                  else
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                      color: JyotiTheme.textSubtle,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onPressed: () {
+                        context.read<JyotiProvider>().deleteSession(session.id);
+                      },
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

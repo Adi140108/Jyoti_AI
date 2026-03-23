@@ -25,153 +25,134 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
   }
 
-  void _showUnderWorking(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text(
-          'This feature is still under working.',
-          style: TextStyle(color: JyotiTheme.textPrimary),
-        ),
-        backgroundColor: JyotiTheme.surface,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(JyotiTheme.radiusSm),
-        ),
-      ),
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      backgroundColor: JyotiTheme.background,
+      body: DashboardContent(),
     );
   }
+}
+
+class DashboardContent extends StatelessWidget {
+  const DashboardContent({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: JyotiTheme.background,
-      body: Consumer<JyotiProvider>(
-        builder: (context, provider, _) {
-          final user = provider.user;
-          final reading = provider.dailyReading;
-          final panchang = provider.panchang;
-          final rashiColor = Color(user.rashi.color);
-
-          return CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              // App Bar
-              SliverAppBar(
-                expandedHeight: 80,
-                floating: false,
-                pinned: true,
-                backgroundColor: JyotiTheme.background,
-                surfaceTintColor: Colors.transparent,
-                title: Row(
-                  children: [
-                    Container(
-                      width: 34,
-                      height: 34,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: JyotiTheme.goldGradient,
-                      ),
-                      child: const Center(
-                        child: Text('🕉️', style: TextStyle(fontSize: 16)),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    const Text(
-                      'Jyoti AI',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: JyotiTheme.textPrimary,
-                      ),
-                    ),
-                  ],
-                ),
-                actions: [
-                  // Points badge
-                  Container(
-                    margin: const EdgeInsets.only(right: 16),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(
-                        JyotiTheme.radiusFull,
-                      ),
-                      color: JyotiTheme.gold.withValues(alpha: 0.15),
-                      border: Border.all(
-                        color: JyotiTheme.gold.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text('✨', style: TextStyle(fontSize: 14)),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${user.points}',
-                          style: const TextStyle(
-                            color: JyotiTheme.goldLight,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: JyotiTheme.spacingMd,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Greeting
-                      _buildGreeting(user),
-                      const SizedBox(height: JyotiTheme.spacingLg),
-
-                      // Tier + Streak row
-                      _buildTierStreak(user),
-                      const SizedBox(height: JyotiTheme.spacingLg),
-
-                      // Daily Reading Card
-                      if (provider.isReadingLoading)
-                        _buildLoadingSkeleton()
-                      else if (reading != null)
-                        _buildDailyReadingCard(context, reading, rashiColor),
-
-                      const SizedBox(height: JyotiTheme.spacingMd),
-
-                      // Panchang
-                      if (panchang != null) _buildPanchangCard(panchang),
-
-                      const SizedBox(height: JyotiTheme.spacingMd),
-
-                      // Quick Actions
-                      _buildQuickActions(context),
-
-                      const SizedBox(height: JyotiTheme.spacingMd),
-
-                      // Today's Muhurat
-                      _buildMuhuratCard(),
-
-                      const SizedBox(height: 120),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
-      ),
+    return CustomScrollView(
+      physics: const BouncingScrollPhysics(),
+      slivers: [
+        const DashboardAppBar(),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: JyotiTheme.spacingMd,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const GreetingWidget(),
+                const SizedBox(height: JyotiTheme.spacingLg),
+                const TierStreakWidget(),
+                const SizedBox(height: JyotiTheme.spacingLg),
+                const DailyReadingSection(),
+                const SizedBox(height: JyotiTheme.spacingMd),
+                const PanchangSection(),
+                const SizedBox(height: JyotiTheme.spacingMd),
+                const QuickActionsSection(),
+                const SizedBox(height: JyotiTheme.spacingMd),
+                const MuhuratCard(),
+                const SizedBox(height: 120),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
+}
 
-  Widget _buildGreeting(UserProfile user) {
+class DashboardAppBar extends StatelessWidget {
+  const DashboardAppBar({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverAppBar(
+      expandedHeight: 80,
+      floating: false,
+      pinned: true,
+      backgroundColor: JyotiTheme.background,
+      surfaceTintColor: Colors.transparent,
+      title: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: JyotiTheme.goldGradient,
+            ),
+            child: const Center(
+              child: Text('🕉️', style: TextStyle(fontSize: 16)),
+            ),
+          ),
+          const SizedBox(width: 10),
+          const Text(
+            'Jyoti AI',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: JyotiTheme.textPrimary,
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        // Points badge
+        Selector<JyotiProvider, int>(
+          selector: (_, p) => p.user.points,
+          builder: (_, points, __) => Container(
+            margin: const EdgeInsets.only(right: 16),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 6,
+            ),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(
+                JyotiTheme.radiusFull,
+              ),
+              color: JyotiTheme.gold.withValues(alpha: 0.15),
+              border: Border.all(
+                color: JyotiTheme.gold.withValues(alpha: 0.3),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('✨', style: TextStyle(fontSize: 14)),
+                const SizedBox(width: 4),
+                Text(
+                  '$points',
+                  style: const TextStyle(
+                    color: JyotiTheme.goldLight,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class GreetingWidget extends StatelessWidget {
+  const GreetingWidget({super.key});
+
+  @override
+  Widget build(BuildContext context) {
     final hour = DateTime.now().hour;
     String greeting;
     String emoji;
@@ -186,86 +167,137 @@ class _DashboardScreenState extends State<DashboardScreen> {
       emoji = '🌙';
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '$emoji $greeting, ${user.name}',
-          style: const TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
-            color: JyotiTheme.textPrimary,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          DateFormat('EEEE, d MMMM yyyy').format(DateTime.now()),
-          style: const TextStyle(color: JyotiTheme.textMuted, fontSize: 14),
-        ),
-      ],
+    return Selector<JyotiProvider, String>(
+      selector: (_, p) => p.user.name,
+      builder: (context, name, _) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '$emoji $greeting, $name',
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+                color: JyotiTheme.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              DateFormat('EEEE, d MMMM yyyy').format(DateTime.now()),
+              style: const TextStyle(color: JyotiTheme.textMuted, fontSize: 14),
+            ),
+          ],
+        );
+      },
     );
   }
+}
 
-  Widget _buildTierStreak(UserProfile user) {
-    final tierColor = Color(user.tier.color);
-    return Row(
-      children: [
-        // Tier badge
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(JyotiTheme.radiusFull),
-            color: tierColor.withValues(alpha: 0.15),
-            border: Border.all(color: tierColor.withValues(alpha: 0.3)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(user.tier.emoji, style: const TextStyle(fontSize: 14)),
-              const SizedBox(width: 6),
-              Text(
-                '${user.tier.label} Tier',
-                style: TextStyle(
-                  color: tierColor,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
+class TierStreakWidget extends StatelessWidget {
+  const TierStreakWidget({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Selector<JyotiProvider, UserProfile>(
+      selector: (_, p) => p.user,
+      builder: (context, user, _) {
+        final tierColor = Color(user.tier.color);
+        return Row(
+          children: [
+            // Tier badge
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(JyotiTheme.radiusFull),
+                color: tierColor.withValues(alpha: 0.15),
+                border: Border.all(color: tierColor.withValues(alpha: 0.3)),
               ),
-            ],
-          ),
-        ),
-        const SizedBox(width: JyotiTheme.spacingSm),
-        // Streak
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(JyotiTheme.radiusFull),
-            color: JyotiTheme.surfaceVariant,
-            border: Border.all(color: JyotiTheme.border),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('🔥', style: TextStyle(fontSize: 14)),
-              const SizedBox(width: 4),
-              Text(
-                '${user.loginStreak} day streak',
-                style: const TextStyle(
-                  color: JyotiTheme.textSecondary,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(user.tier.emoji, style: const TextStyle(fontSize: 14)),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${user.tier.label} Tier',
+                    style: TextStyle(
+                      color: tierColor,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
-      ],
+            ),
+            const SizedBox(width: JyotiTheme.spacingSm),
+            // Streak
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(JyotiTheme.radiusFull),
+                color: JyotiTheme.surfaceVariant,
+                border: Border.all(color: JyotiTheme.border),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('🔥', style: TextStyle(fontSize: 14)),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${user.loginStreak} day streak',
+                    style: const TextStyle(
+                      color: JyotiTheme.textSecondary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
+}
 
-  Widget _buildDailyReadingCard(BuildContext context, DailyReading reading, Color rashiColor) {
-    final scoreStars =
-        '★' * reading.overallScore.round() +
+class DailyReadingSection extends StatelessWidget {
+  const DailyReadingSection({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Selector<JyotiProvider, (bool, DailyReading?, Color)>(
+      selector: (_, p) => (
+        p.isReadingLoading,
+        p.dailyReading,
+        Color(p.user.rashi.color)
+      ),
+      builder: (context, data, _) {
+        final (isLoading, reading, rashiColor) = data;
+
+        if (isLoading) {
+          return const LoadingSkeleton();
+        } else if (reading != null) {
+          return DailyReadingCard(reading: reading, rashiColor: rashiColor);
+        }
+        return const SizedBox.shrink();
+      },
+    );
+  }
+}
+
+class DailyReadingCard extends StatelessWidget {
+  final DailyReading reading;
+  final Color rashiColor;
+
+  const DailyReadingCard({
+    super.key,
+    required this.reading,
+    required this.rashiColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scoreStars = '★' * reading.overallScore.round() +
         '☆' * (5 - reading.overallScore.round());
 
     return Container(
@@ -327,7 +359,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 children: [
                   Text(
                     scoreStars,
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: JyotiTheme.gold,
                       fontSize: 14,
                       letterSpacing: 2,
@@ -363,11 +395,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           // Lucky row
           Row(
             children: [
-              _miniTag('🎨 ${reading.luckyColor}', rashiColor),
+              MiniTag(text: '🎨 ${reading.luckyColor}', color: rashiColor),
               const SizedBox(width: 8),
-              _miniTag('🔢 ${reading.luckyNumber}', rashiColor),
+              MiniTag(text: '🔢 ${reading.luckyNumber}', color: rashiColor),
               const SizedBox(width: 8),
-              _miniTag('⏰ ${reading.favorableTime}', rashiColor),
+              MiniTag(text: '⏰ ${reading.favorableTime}', color: rashiColor),
             ],
           ),
 
@@ -401,7 +433,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
-              onPressed: () => _showUnderWorking(context),
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Share feature under development')),
+                );
+              },
               icon: Icon(Icons.share_rounded, size: 18, color: rashiColor),
               label: Text(
                 'Share Reading & Earn 50 pts',
@@ -420,8 +456,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
+}
 
-  Widget _miniTag(String text, Color color) {
+class MiniTag extends StatelessWidget {
+  final String text;
+  final Color color;
+
+  const MiniTag({super.key, required this.text, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 6),
@@ -442,8 +486,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
+}
 
-  Widget _buildPanchangCard(PanchangData p) {
+class PanchangSection extends StatelessWidget {
+  const PanchangSection({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Selector<JyotiProvider, PanchangData?>(
+      selector: (_, p) => p.panchang,
+      builder: (context, panchang, _) {
+        if (panchang == null) return const SizedBox.shrink();
+        return PanchangCard(p: panchang);
+      },
+    );
+  }
+}
+
+class PanchangCard extends StatelessWidget {
+  final PanchangData p;
+
+  const PanchangCard({super.key, required this.p});
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(JyotiTheme.spacingMd),
       decoration: BoxDecoration(
@@ -454,11 +520,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          const Row(
             children: [
-              const Text('📅', style: TextStyle(fontSize: 18)),
-              const SizedBox(width: 8),
-              const Text(
+              Text('📅', style: TextStyle(fontSize: 18)),
+              SizedBox(width: 8),
+              Text(
                 'Aaj Ka Panchang',
                 style: TextStyle(
                   color: JyotiTheme.textPrimary,
@@ -469,20 +535,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ],
           ),
           const SizedBox(height: JyotiTheme.spacingMd),
-          _panchangRow('Tithi', p.tithi),
-          _panchangRow('Nakshatra', p.nakshatra),
-          _panchangRow('Yoga', p.yoga),
-          _panchangRow('Karana', p.karana),
+          PanchangRow(label: 'Tithi', value: p.tithi),
+          PanchangRow(label: 'Nakshatra', value: p.nakshatra),
+          PanchangRow(label: 'Yoga', value: p.yoga),
+          PanchangRow(label: 'Karana', value: p.karana),
           const Divider(color: JyotiTheme.borderSubtle, height: 20),
-          _panchangRow('🌅 Sunrise', p.sunrise),
-          _panchangRow('🌇 Sunset', p.sunset),
-          _panchangRow('⚠️ Rahu Kaal', p.rahuKaal),
+          PanchangRow(label: '🌅 Sunrise', value: p.sunrise),
+          PanchangRow(label: '🌇 Sunset', value: p.sunset),
+          PanchangRow(label: '⚠️ Rahu Kaal', value: p.rahuKaal),
         ],
       ),
     );
   }
+}
 
-  Widget _panchangRow(String label, String value) {
+class PanchangRow extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const PanchangRow({super.key, required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
@@ -492,20 +566,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
             label,
             style: const TextStyle(color: JyotiTheme.textMuted, fontSize: 13),
           ),
-          Text(
-            value,
-            style: const TextStyle(
-              color: JyotiTheme.textPrimary,
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: const TextStyle(
+                color: JyotiTheme.textPrimary,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildQuickActions(BuildContext context) {
+class QuickActionsSection extends StatelessWidget {
+  const QuickActionsSection({super.key});
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -520,18 +605,54 @@ class _DashboardScreenState extends State<DashboardScreen> {
         const SizedBox(height: JyotiTheme.spacingSm),
         Row(
           children: [
-            _actionTile('💬', 'Ask Jyoti', '20 pts', JyotiTheme.gold, () => _showUnderWorking(context)),
+            ActionTile(
+              emoji: '💬',
+              label: 'Ask Jyoti',
+              cost: '20 pts',
+              color: JyotiTheme.gold,
+              onTap: () {},
+            ),
             const SizedBox(width: 10),
-            _actionTile('📜', 'Kundli', '30 pts', JyotiTheme.cosmic, () => _showUnderWorking(context)),
+            ActionTile(
+              emoji: '📜',
+              label: 'Kundli',
+              cost: '30 pts',
+              color: JyotiTheme.cosmic,
+              onTap: () {},
+            ),
             const SizedBox(width: 10),
-            _actionTile('💕', 'Match', '40 pts', const Color(0xFFEF4444), () => _showUnderWorking(context)),
+            ActionTile(
+              emoji: '💕',
+              label: 'Match',
+              cost: '40 pts',
+              color: const Color(0xFFEF4444),
+              onTap: () {},
+            ),
           ],
         ),
       ],
     );
   }
+}
 
-  Widget _actionTile(String emoji, String label, String cost, Color color, VoidCallback onTap) {
+class ActionTile extends StatelessWidget {
+  final String emoji;
+  final String label;
+  final String cost;
+  final Color color;
+  final VoidCallback onTap;
+
+  const ActionTile({
+    super.key,
+    required this.emoji,
+    required this.label,
+    required this.cost,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
@@ -568,8 +689,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
+}
 
-  Widget _buildMuhuratCard() {
+class MuhuratCard extends StatelessWidget {
+  const MuhuratCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(JyotiTheme.spacingMd),
       decoration: BoxDecoration(
@@ -577,10 +703,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         color: JyotiTheme.cardBg,
         border: Border.all(color: JyotiTheme.border),
       ),
-      child: Column(
+      child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
               Text('🕐', style: TextStyle(fontSize: 18)),
               SizedBox(width: 8),
@@ -594,17 +720,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ],
           ),
-          const SizedBox(height: JyotiTheme.spacingMd),
-          _muhuratRow('Work / Business', '10:00 AM – 12:30 PM', '✅'),
-          _muhuratRow('Travel', '2:00 PM – 4:00 PM', '✅'),
-          _muhuratRow('Finance', '11:00 AM – 1:00 PM', '✅'),
-          _muhuratRow('Avoid', '10:30 AM – 12:00 PM (Rahu Kaal)', '⚠️'),
+          SizedBox(height: JyotiTheme.spacingMd),
+          MuhuratRow(
+            activity: 'Work / Business',
+            time: '10:00 AM – 12:30 PM',
+            status: '✅',
+          ),
+          MuhuratRow(
+            activity: 'Travel',
+            time: '2:00 PM – 4:00 PM',
+            status: '✅',
+          ),
+          MuhuratRow(
+            activity: 'Finance',
+            time: '11:00 AM – 1:00 PM',
+            status: '✅',
+          ),
+          MuhuratRow(
+            activity: 'Avoid',
+            time: '10:30 AM – 12:00 PM (Rahu Kaal)',
+            status: '⚠️',
+          ),
         ],
       ),
     );
   }
+}
 
-  Widget _muhuratRow(String activity, String time, String status) {
+class MuhuratRow extends StatelessWidget {
+  final String activity;
+  final String time;
+  final String status;
+
+  const MuhuratRow({
+    super.key,
+    required this.activity,
+    required this.time,
+    required this.status,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -632,8 +788,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
+}
 
-  Widget _buildLoadingSkeleton() {
+class LoadingSkeleton extends StatelessWidget {
+  const LoadingSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
     return Shimmer.fromColors(
       baseColor: JyotiTheme.surfaceVariant,
       highlightColor: JyotiTheme.border,

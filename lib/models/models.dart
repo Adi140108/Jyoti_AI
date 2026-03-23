@@ -134,6 +134,40 @@ enum UserTier {
   }
 }
 
+// ── AI Persona ──
+enum Persona {
+  vedicSage(
+    id: 'vedic_sage',
+    name: 'Vedic Sage',
+    description: 'Traditional, deep spiritual wisdom, master of Sanskrit literature (Sahitya), and Vedic scriptures.',
+    emoji: '🧔‍♂️',
+  ),
+  modernAstrologer(
+    id: 'modern_astrologer',
+    name: 'Modern Astrologer',
+    description: 'Practical, logic-based advice for the modern world, occasionally citing timeless literary wisdom.',
+    emoji: '👔',
+  ),
+  remedySpecialist(
+    id: 'remedy_specialist',
+    name: 'Remedy Specialist',
+    description: 'Focused on specific Mantras, Gemstones, and fix-it solutions, drawing from the aesthetic emotional power of Rasas.',
+    emoji: '📿',
+  );
+
+  final String id;
+  final String name;
+  final String description;
+  final String emoji;
+
+  const Persona({
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.emoji,
+  });
+}
+
 // ── Points Pack ──
 class PointsPack {
   final String id;
@@ -220,6 +254,53 @@ class ChatMessage {
   }
 }
 
+// ── Chat Session ──
+class ChatSession {
+  final String id;
+  final String title;
+  final List<ChatMessage> messages;
+  final DateTime createdAt;
+
+  ChatSession({
+    required this.id,
+    required this.title,
+    required this.messages,
+    required this.createdAt,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'title': title,
+        'messages': messages.map((m) => m.toJson()).toList(),
+        'createdAt': createdAt.toIso8601String(),
+      };
+
+  factory ChatSession.fromJson(Map<String, dynamic> json) {
+    return ChatSession(
+      id: json['id'] as String,
+      title: json['title'] as String,
+      messages: (json['messages'] as List)
+          .map((m) => ChatMessage.fromJson(m as Map<String, dynamic>))
+          .toList(),
+      createdAt: DateTime.parse(json['createdAt'] as String),
+    );
+  }
+
+  ChatSession copyWith({
+    String? id,
+    String? title,
+    List<ChatMessage>? messages,
+    DateTime? createdAt,
+  }) {
+    return ChatSession(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      messages: messages ?? this.messages,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+}
+
 // ── Daily Reading ──
 class DailyReading {
   final Rashi rashi;
@@ -280,6 +361,9 @@ class UserProfile {
   final int lifetimePoints;
   final int loginStreak;
   final String language;
+  final double? latitude;
+  final double? longitude;
+  final double? timezoneOffset;
 
   const UserProfile({
     required this.name,
@@ -292,9 +376,78 @@ class UserProfile {
     required this.lifetimePoints,
     required this.loginStreak,
     required this.language,
+    this.latitude,
+    this.longitude,
+    this.timezoneOffset,
   });
 
   UserTier get tier => UserTier.fromPoints(lifetimePoints);
+
+  /// Whether geo coordinates have been successfully resolved by the API
+  bool get hasExactGeoData =>
+      latitude != null && longitude != null && timezoneOffset != null;
+
+  /// Hardcoded fallbacks for major cities to ensure API never breaks
+  static const Map<String, Map<String, double>> _cityFallbacks = {
+    'bangalore': {'lat': 12.9716, 'lng': 77.5946, 'tz': 5.5},
+    'bengaluru': {'lat': 12.9716, 'lng': 77.5946, 'tz': 5.5},
+    'delhi': {'lat': 28.6139, 'lng': 77.2090, 'tz': 5.5},
+    'new delhi': {'lat': 28.6139, 'lng': 77.2090, 'tz': 5.5},
+    'mumbai': {'lat': 19.0760, 'lng': 72.8777, 'tz': 5.5},
+    'chennai': {'lat': 13.0827, 'lng': 80.2707, 'tz': 5.5},
+    'kolkata': {'lat': 22.5726, 'lng': 88.3639, 'tz': 5.5},
+    'hyderabad': {'lat': 17.3850, 'lng': 78.4867, 'tz': 5.5},
+    'pune': {'lat': 18.5204, 'lng': 73.8567, 'tz': 5.5},
+    'ahmedabad': {'lat': 23.0225, 'lng': 72.5714, 'tz': 5.5},
+    'jaipur': {'lat': 26.9124, 'lng': 75.7873, 'tz': 5.5},
+    'surat': {'lat': 21.1702, 'lng': 72.8311, 'tz': 5.5},
+    'lucknow': {'lat': 26.8467, 'lng': 80.9462, 'tz': 5.5},
+    'kanpur': {'lat': 26.4499, 'lng': 80.3319, 'tz': 5.5},
+    'nagpur': {'lat': 21.1458, 'lng': 79.0882, 'tz': 5.5},
+    'indore': {'lat': 22.7196, 'lng': 75.8577, 'tz': 5.5},
+    'bhopal': {'lat': 23.2599, 'lng': 77.4126, 'tz': 5.5},
+  };
+
+  /// Safe getters that fall back to a hardcoded city or default to Delhi
+  double get safeLatitude {
+    if (latitude != null) return latitude!;
+    final city = placeOfBirth.toLowerCase().trim();
+    return _cityFallbacks[city]?['lat'] ?? 28.6139; // Default Delhi
+  }
+
+  double get safeLongitude {
+    if (longitude != null) return longitude!;
+    final city = placeOfBirth.toLowerCase().trim();
+    return _cityFallbacks[city]?['lng'] ?? 77.2090; // Default Delhi
+  }
+
+  double get safeTimezoneOffset {
+    if (timezoneOffset != null) return timezoneOffset!;
+    final city = placeOfBirth.toLowerCase().trim();
+    return _cityFallbacks[city]?['tz'] ?? 5.5; // Default IST
+  }
+
+  /// Parse timeOfBirth string (e.g. "06:30 AM") into hour/minute
+  int get birthHour {
+    try {
+      final parts = timeOfBirth.replaceAll(RegExp(r'[APap][Mm]'), '').trim().split(':');
+      int h = int.parse(parts[0]);
+      if (timeOfBirth.toUpperCase().contains('PM') && h != 12) h += 12;
+      if (timeOfBirth.toUpperCase().contains('AM') && h == 12) h = 0;
+      return h;
+    } catch (_) {
+      return 6; // default
+    }
+  }
+
+  int get birthMinute {
+    try {
+      final parts = timeOfBirth.replaceAll(RegExp(r'[APap][Mm]'), '').trim().split(':');
+      return int.parse(parts[1]);
+    } catch (_) {
+      return 0;
+    }
+  }
 
   UserProfile copyWith({
     String? name,
@@ -307,6 +460,9 @@ class UserProfile {
     int? lifetimePoints,
     int? loginStreak,
     String? language,
+    double? latitude,
+    double? longitude,
+    double? timezoneOffset,
   }) {
     return UserProfile(
       name: name ?? this.name,
@@ -319,6 +475,9 @@ class UserProfile {
       lifetimePoints: lifetimePoints ?? this.lifetimePoints,
       loginStreak: loginStreak ?? this.loginStreak,
       language: language ?? this.language,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      timezoneOffset: timezoneOffset ?? this.timezoneOffset,
     );
   }
 }

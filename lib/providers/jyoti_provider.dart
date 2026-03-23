@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:isolate';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:jyoti_ai/models/models.dart';
@@ -17,6 +18,8 @@ class JyotiProvider extends ChangeNotifier {
   static const String _lifetimePointsKey = 'user_lifetime_points';
   static const String _dailyClaimedKey = 'daily_claimed';
   static const String _isDarkModeKey = 'is_dark_mode';
+  static const String _languageKey = 'user_language';
+  static const String _personaKey = 'user_persona';
 
   // ── Theme ──
   bool _isDarkMode = true;
@@ -42,11 +45,19 @@ class JyotiProvider extends ChangeNotifier {
     final savedStreak = _prefs!.getInt(_loginStreakKey) ?? 0;
     final savedPoints = _prefs!.getInt(_pointsKey) ?? 250;
     final savedLifetime = _prefs!.getInt(_lifetimePointsKey) ?? 0;
+    final savedLanguage = _prefs!.getString(_languageKey) ?? 'Hindi';
+    final savedPersonaId = _prefs!.getString(_personaKey) ?? Persona.modernAstrologer.id;
+    
     _user = _user.copyWith(
       loginStreak: savedStreak,
       points: savedPoints,
       lifetimePoints: savedLifetime,
+      language: savedLanguage,
     );
+    
+    _persona = Persona.values.firstWhere((p) => p.id == savedPersonaId, 
+      orElse: () => Persona.modernAstrologer);
+      
     notifyListeners();
   }
 
@@ -87,23 +98,49 @@ class JyotiProvider extends ChangeNotifier {
     await _prefs!.setInt(_lifetimePointsKey, _user.lifetimePoints);
   }
 
-  void _loadChatHistory() {
+  Future<void> _loadChatHistory() async {
     final historyStr = _prefs?.getString(_chatHistoryKey);
     if (historyStr != null) {
       try {
-        final List<dynamic> decoded = jsonDecode(historyStr);
-        _messages.addAll(decoded.map((e) => ChatMessage.fromJson(e)).toList());
+        // Offload heavy JSON decoding and model mapping to a background isolate
+        final List<ChatSession> loadedSessions = await Isolate.run(() {
+          final List<dynamic> decoded = jsonDecode(historyStr);
+          return decoded.map((e) => ChatSession.fromJson(e)).toList();
+        });
+
+        _sessions.clear();
+        _sessions.addAll(loadedSessions);
+        
+        if (_sessions.isNotEmpty) {
+          _currentSessionId = _sessions.first.id;
+        } else {
+          _createNewSession();
+        }
         notifyListeners();
       } catch (e) {
-        // Handle corrupt data
+        _createNewSession();
       }
+    } else {
+      _createNewSession();
     }
   }
 
   Future<void> _saveChatHistory() async {
     if (_prefs == null) return;
-    final encoded = jsonEncode(_messages.map((e) => e.toJson()).toList());
+    final encoded = jsonEncode(_sessions.map((e) => e.toJson()).toList());
     await _prefs!.setString(_chatHistoryKey, encoded);
+  }
+
+  void _createNewSession() {
+    final newSession = ChatSession(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      title: 'New Chat',
+      messages: [],
+      createdAt: DateTime.now(),
+    );
+    _sessions.insert(0, newSession);
+    _currentSessionId = newSession.id;
+    notifyListeners();
   }
 
   // ── User ──
@@ -121,7 +158,8 @@ class JyotiProvider extends ChangeNotifier {
   );
 
   // ── Chat ──
-  final List<ChatMessage> _messages = [];
+  final List<ChatSession> _sessions = [];
+  String? _currentSessionId;
   bool _isChatLoading = false;
 
   // ── Daily Reading ──
@@ -129,12 +167,36 @@ class JyotiProvider extends ChangeNotifier {
   PanchangData? _panchang;
   bool _isReadingLoading = false;
 
+  // ── AI Persona ──
+  Persona _persona = Persona.modernAstrologer;
+  Persona get persona => _persona;
+  
+  void setPersona(Persona p) {
+    _persona = p;
+    _prefs?.setString(_personaKey, p.id);
+    notifyListeners();
+  }
+
   // ── Onboarding ──
   bool _hasCompletedOnboarding = false;
 
   // ── Getters ──
   UserProfile get user => _user;
-  List<ChatMessage> get messages => List.unmodifiable(_messages);
+  List<ChatSession> get sessions => List.unmodifiable(_sessions);
+  String? get currentSessionId => _currentSessionId;
+  
+  List<ChatMessage> get messages {
+    if (_currentSessionId == null) return [];
+    final session = _sessions.firstWhere((s) => s.id == _currentSessionId, 
+      orElse: () => _sessions.first);
+    return session.messages;
+  }
+  
+  ChatSession? get currentSession {
+    if (_currentSessionId == null) return null;
+    return _sessions.firstWhere((s) => s.id == _currentSessionId, 
+      orElse: () => _sessions.first);
+  }
   bool get isChatLoading => _isChatLoading;
   DailyReading? get dailyReading => _dailyReading;
   PanchangData? get panchang => _panchang;
@@ -158,14 +220,34 @@ class JyotiProvider extends ChangeNotifier {
       rashi: rashi,
       language: language,
     );
+    _prefs?.setString(_languageKey, language);
     _hasCompletedOnboarding = true;
     notifyListeners();
-    loadDailyData();
+    // Resolve geo location in background, then load data
+    _resolveGeoAndLoadData();
   }
 
   void skipOnboarding() {
     _hasCompletedOnboarding = true;
     notifyListeners();
+    loadDailyData();
+  }
+
+  /// Resolve geo coordinates for user's place of birth, then load daily data
+  Future<void> _resolveGeoAndLoadData() async {
+    try {
+      final geo = await JyotiService.resolveGeoLocation(_user.placeOfBirth);
+      if (geo != null) {
+        _user = _user.copyWith(
+          latitude: geo['latitude'],
+          longitude: geo['longitude'],
+          timezoneOffset: geo['timezone'],
+        );
+        notifyListeners();
+      }
+    } catch (_) {
+      // Silently handle — continue without geo data
+    }
     loadDailyData();
   }
 
@@ -176,8 +258,8 @@ class JyotiProvider extends ChangeNotifier {
 
     try {
       final results = await Future.wait([
-        JyotiService.getDailyReading(_user.rashi),
-        JyotiService.getPanchang(),
+        JyotiService.getDailyReading(_user.rashi, _user),
+        JyotiService.getPanchang(_user),
       ]);
       _dailyReading = results[0] as DailyReading;
       _panchang = results[1] as PanchangData;
@@ -190,11 +272,38 @@ class JyotiProvider extends ChangeNotifier {
   }
 
   // ── Chat ──
+  void startNewChat() {
+    _createNewSession();
+    _saveChatHistory();
+  }
+
+  void switchSession(String id) {
+    _currentSessionId = id;
+    notifyListeners();
+  }
+
+  void deleteSession(String id) {
+    _sessions.removeWhere((s) => s.id == id);
+    if (_currentSessionId == id) {
+      if (_sessions.isNotEmpty) {
+        _currentSessionId = _sessions.first.id;
+      } else {
+        _createNewSession();
+      }
+    }
+    _saveChatHistory();
+    notifyListeners();
+  }
+
   Future<void> sendMessage(String text) async {
     if (text.trim().isEmpty) return;
+    if (_currentSessionId == null) _createNewSession();
+
+    final sessionIndex = _sessions.indexWhere((s) => s.id == _currentSessionId);
+    if (sessionIndex == -1) return;
 
     if (_user.points <= 0) {
-      _messages.add(
+      _sessions[sessionIndex].messages.add(
         ChatMessage(
           text: 'Aapke paas paryapt points nahi hain. Kripya aur prashn poochne ke liye points recharge karein. 💎',
           isUser: false,
@@ -206,21 +315,25 @@ class JyotiProvider extends ChangeNotifier {
     }
 
     // Add user message
-    _messages.add(
-      ChatMessage(text: text.trim(), isUser: true, timestamp: DateTime.now()),
-    );
+    final userMsg = ChatMessage(text: text.trim(), isUser: true, timestamp: DateTime.now());
+    _sessions[sessionIndex].messages.add(userMsg);
+    
     _isChatLoading = true;
     notifyListeners();
 
     try {
-      // Pass the chat history to give the AI memory
-      final response = await JyotiService.getAIResponse(text, _user, _messages);
-      _messages.add(response);
+      // Pass the chat history and persona to give the AI memory
+      final response = await JyotiService.getAIResponse(text, _user, _sessions[sessionIndex].messages, _persona);
+      _sessions[sessionIndex].messages.add(response);
+
+      // Auto-titling: if it's the first user message, generate a title
+      if (_sessions[sessionIndex].messages.where((m) => m.isUser).length == 1) {
+        _generateTitleForSession(_sessions[sessionIndex]);
+      }
 
       // Deduct points dynamically based on AI context usage (tokens)
       int pointsToDeduct = 15; // Default fallback
       if (response.totalTokens != null && response.totalTokens! > 0) {
-        // e.g., 1 point per 15 tokens, min 10, max 100
         pointsToDeduct = (response.totalTokens! / 15).ceil().clamp(10, 100);
       }
 
@@ -231,7 +344,7 @@ class JyotiProvider extends ChangeNotifier {
       }
 
     } catch (e) {
-      _messages.add(
+      _sessions[sessionIndex].messages.add(
         ChatMessage(
           text:
               'Maaf kijiye, abhi thoda issue aa raha hai. Kripya thodi der baad try karein. 🙏',
@@ -244,6 +357,18 @@ class JyotiProvider extends ChangeNotifier {
       _saveChatHistory(); // Save locally
       notifyListeners();
     }
+  }
+
+  Future<void> _generateTitleForSession(ChatSession session) async {
+    try {
+      final title = await JyotiService.generateChatTitle(session.messages);
+      final index = _sessions.indexWhere((s) => s.id == session.id);
+      if (index != -1) {
+        _sessions[index] = _sessions[index].copyWith(title: title);
+        _saveChatHistory();
+        notifyListeners();
+      }
+    } catch (_) {}
   }
 
   // ── Points ──
@@ -299,6 +424,7 @@ class JyotiProvider extends ChangeNotifier {
   // ── Language ──
   void setLanguage(String lang) {
     _user = _user.copyWith(language: lang);
+    _prefs?.setString(_languageKey, lang);
     notifyListeners();
   }
 
@@ -330,8 +456,10 @@ class JyotiProvider extends ChangeNotifier {
       language: 'English',
     );
 
-    // Clear chat
-    _messages.clear();
+    // Clear sessions
+    _sessions.clear();
+    _currentSessionId = null;
+    _createNewSession();
 
     // Reset onboarding flag
     _hasCompletedOnboarding = false;

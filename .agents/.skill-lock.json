@@ -1,0 +1,14 @@
+{
+  "version": 3,
+  "skills": {
+    "prd": {
+      "source": "github/awesome-copilot",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/github/awesome-copilot.git",
+      "skillFolderHash": "",
+      "installedAt": "2026-03-21T09:38:01.189Z",
+      "updatedAt": "2026-03-21T09:38:01.189Z"
+    }
+  },
+  "dismissed": {}
+}
